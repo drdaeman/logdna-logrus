@@ -193,7 +193,7 @@ func checkLines(t *testing.T, body []byte, expect []string, expectMeta []map[str
 					}
 				}
 			default:
-				t.Error("Line %d has incorrect type %v", idx+1, reflect.TypeOf(line))
+				t.Errorf("Line %d has incorrect type %v", idx+1, reflect.TypeOf(line))
 				continue
 			}
 		}
@@ -305,10 +305,10 @@ func TestLogDNA(t *testing.T) {
 			"Test log entry 3",
 			"Test log entry 4",
 		}, []map[string]interface{}{
-			map[string]interface{}{},
-			map[string]interface{}{"Foo": "Bar"},
-			map[string]interface{}{},
-			map[string]interface{}{},
+			{},
+			{"Foo": "Bar"},
+			{},
+			{},
 		})
 	default:
 		t.Error("Logged had not flushed")
