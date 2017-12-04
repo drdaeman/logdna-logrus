@@ -1,6 +1,8 @@
 LogDNA Logrus and Logrus Mate library
 =====================================
 
+[![Go Report Card][grc-badge]](grc)
+
 This library allows logging to [LogDNA][logdna] from [Logrus][logrus],
 configuring everything using [Logrus Mate][mate] (currently, the only way).
 
@@ -62,3 +64,5 @@ Suggestions (and pull requests) are welcomed.
 [logdna]: https://logdna.com
 [logrus]: https://github.com/sirupsen/logrus
 [mate]: https://github.com/gogap/logrus_mate
+[grc-badge]: https://goreportcard.com/badge/github.com/drdaeman/logdna-logrus
+[grc]: https://goreportcard.com/report/github.com/drdaeman/logdna-logrus
