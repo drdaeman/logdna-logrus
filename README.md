@@ -46,6 +46,9 @@ The supported options are:
   - `json`: how to send structured log fields. Will format line as JSON if set
     to true (using `"message"` key for log message), or pass fields as `meta`
     if not.
+  - `text-format': whenever to also include structured logging data in the
+    message. Default to false, enabling will append key-value pairs to
+    the message texts, so they'll be immediately visible.
   - `url` allows to override the ignestion endpoint URL (e.g. for testing)
 
 Limitations

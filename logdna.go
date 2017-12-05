@@ -32,13 +32,14 @@ type Config struct {
 
 // Hook is a Logrus hook that sends entries to LogDNA
 type Hook struct {
-	Config     *Config
-	BufferSize int
-	FlushEvery time.Duration
-	MayDrop    bool
-	LineJSON   bool
-	c          chan *logEntry
-	wg         *sync.WaitGroup
+	Config           *Config
+	BufferSize       int
+	FlushEvery       time.Duration
+	MayDrop          bool
+	LineJSON         bool
+	MessageFormatter logrus.Formatter
+	c                chan *logEntry
+	wg               *sync.WaitGroup
 }
 
 type logEntry struct {
@@ -82,6 +83,14 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		Level:     strings.ToUpper(entry.Level.String()),
 		config:    hook.Config,
 	}
+	message := entry.Message
+	if hook.MessageFormatter != nil {
+		formatted, err := hook.MessageFormatter.Format(entry)
+		if err != nil {
+			return err
+		}
+		message = string(formatted)
+	}
 	if hook.LineJSON {
 		meta := make(map[string]interface{})
 		for k, v := range entry.Data {
@@ -91,7 +100,7 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 			}
 			meta[k] = v
 		}
-		meta["message"] = entry.Message
+		meta["message"] = message
 		line, err := json.Marshal(meta)
 		if err != nil {
 			return err
@@ -104,7 +113,7 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 			// Don't bother sending empty maps
 			meta = nil
 		}
-		e.Line = entry.Message
+		e.Line = message
 		e.Meta = meta
 	}
 	if hook.MayDrop {
@@ -257,6 +266,14 @@ func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
 		}
 	}
 
+	var formatter logrus.Formatter
+	if config.GetBoolean("text-format", false) {
+		// TODO: Think of a way to pass arbitrary formatter via config
+		formatter = &SimpleTextFormatter{
+			QuoteEmptyFields: true,
+		}
+	}
+
 	bufferSize := int(config.GetInt32("size", 4096))
 	hook := &Hook{
 		Config: &Config{
@@ -268,12 +285,13 @@ func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
 			App:       config.GetString("app"),
 			Env:       config.GetString("env"),
 		},
-		BufferSize: bufferSize,
-		FlushEvery: config.GetTimeDuration("flush", 10*time.Second),
-		MayDrop:    config.GetBoolean("drop", false),
-		LineJSON:   config.GetBoolean("json", false),
-		c:          make(chan *logEntry, int(config.GetInt32("qsize", 128))),
-		wg:         &sync.WaitGroup{},
+		BufferSize:       bufferSize,
+		FlushEvery:       config.GetTimeDuration("flush", 10*time.Second),
+		MayDrop:          config.GetBoolean("drop", false),
+		LineJSON:         config.GetBoolean("json", false),
+		MessageFormatter: formatter,
+		c:                make(chan *logEntry, int(config.GetInt32("qsize", 128))),
+		wg:               &sync.WaitGroup{},
 	}
 	go hook.run()
 	logrus.RegisterExitHandler(func() {
