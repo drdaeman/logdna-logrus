@@ -21,25 +21,25 @@ const DefaultIngestURL = "https://logs.logdna.com/logs/ingest"
 
 // Config is the configuration struct for LogDNAHook
 type Config struct {
-	IngestURL string
-	APIKey    string
-	Hostname  string
-	MAC       string
-	IP        string
-	App       string // NOTE: App and Env are global at the moment
-	Env       string
-}
-
-// Hook is a Logrus hook that sends entries to LogDNA
-type Hook struct {
-	Config           *Config
+	IngestURL        string
+	APIKey           string
+	Hostname         string
+	MAC              string
+	IP               string
+	App              string // NOTE: App and Env are global at the moment
+	Env              string
 	BufferSize       int
 	FlushEvery       time.Duration
 	MayDrop          bool
 	LineJSON         bool
 	MessageFormatter logrus.Formatter
-	c                chan *logEntry
-	wg               *sync.WaitGroup
+}
+
+// Hook is a Logrus hook that sends entries to LogDNA
+type Hook struct {
+	Config *Config
+	c      chan *logEntry
+	wg     *sync.WaitGroup
 }
 
 type logEntry struct {
@@ -84,14 +84,14 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		config:    hook.Config,
 	}
 	message := entry.Message
-	if hook.MessageFormatter != nil {
-		formatted, err := hook.MessageFormatter.Format(entry)
+	if hook.Config.MessageFormatter != nil {
+		formatted, err := hook.Config.MessageFormatter.Format(entry)
 		if err != nil {
 			return err
 		}
 		message = string(formatted)
 	}
-	if hook.LineJSON {
+	if hook.Config.LineJSON {
 		meta := make(map[string]interface{})
 		for k, v := range entry.Data {
 			if k == "message" {
@@ -116,7 +116,7 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		e.Line = message
 		e.Meta = meta
 	}
-	if hook.MayDrop {
+	if hook.Config.MayDrop {
 		// May discard the entry if channel's full, but won't block.
 		select {
 		case hook.c <- e:
@@ -207,7 +207,7 @@ func (hook *Hook) run() chan *logEntry {
 	defer hook.wg.Done()
 
 	buffer := make([]*logEntry, 0)
-	timeout := time.After(hook.FlushEvery)
+	timeout := time.After(hook.Config.FlushEvery)
 	for {
 		select {
 		case entry, ok := <-hook.c:
@@ -225,12 +225,12 @@ func (hook *Hook) run() chan *logEntry {
 				}
 			}
 			buffer = append(buffer, entry)
-			if len(buffer) >= hook.BufferSize {
+			if len(buffer) >= hook.Config.BufferSize {
 				err := hook.Config.flush(&buffer)
-				if err == nil || hook.MayDrop {
+				if err == nil || hook.Config.MayDrop {
 					// TODO: Consider retrying a few times?
 					buffer = make([]*logEntry, 0)
-					timeout = time.After(hook.FlushEvery)
+					timeout = time.After(hook.Config.FlushEvery)
 				}
 				// TODO: Wish there'd be some way to signal about the error
 			}
@@ -239,7 +239,7 @@ func (hook *Hook) run() chan *logEntry {
 				err := hook.Config.flush(&buffer)
 				if err == nil {
 					buffer = make([]*logEntry, 0)
-					timeout = time.After(hook.FlushEvery)
+					timeout = time.After(hook.Config.FlushEvery)
 				}
 			}
 		}
@@ -250,22 +250,34 @@ func init() {
 	logrus_mate.RegisterHook("logdna", NewFromConfig)
 }
 
-// NewFromConfig creates a new LogDNA hook from the Logrus Mate configuration
-func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
-	apiKey := config.GetString("api-key")
-	if apiKey == "" {
+// New creates a new LogDNA hook from a given Config struct (and some extras)
+func New(config Config, queueSize int) (logrus.Hook, error) {
+	if config.APIKey == "" {
 		return nil, errors.New("LogDNA API key is required")
 	}
 
-	hostname := config.GetString("hostname")
-	if hostname == "" {
+	if config.Hostname == "" {
 		var err error
-		hostname, err = os.Hostname()
+		config.Hostname, err = os.Hostname()
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	hook := &Hook{
+		Config: &config,
+		c:      make(chan *logEntry, queueSize),
+		wg:     &sync.WaitGroup{},
+	}
+	go hook.run()
+	logrus.RegisterExitHandler(func() {
+		hook.Close()
+	})
+	return hook, nil
+}
+
+// NewFromConfig creates a new LogDNA hook from the Logrus Mate configuration
+func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
 	var formatter logrus.Formatter
 	if config.GetBoolean("text-format", false) {
 		// TODO: Think of a way to pass arbitrary formatter via config
@@ -274,28 +286,18 @@ func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
 		}
 	}
 
-	bufferSize := int(config.GetInt32("size", 4096))
-	hook := &Hook{
-		Config: &Config{
-			IngestURL: config.GetString("url", DefaultIngestURL),
-			APIKey:    apiKey,
-			Hostname:  hostname,
-			MAC:       config.GetString("mac"),
-			IP:        config.GetString("ip"),
-			App:       config.GetString("app"),
-			Env:       config.GetString("env"),
-		},
-		BufferSize:       bufferSize,
+	return New(Config{
+		IngestURL:        config.GetString("url", DefaultIngestURL),
+		APIKey:           config.GetString("api-key"),
+		Hostname:         config.GetString("hostname"),
+		MAC:              config.GetString("mac"),
+		IP:               config.GetString("ip"),
+		App:              config.GetString("app"),
+		Env:              config.GetString("env"),
+		BufferSize:       int(config.GetInt32("size", 4096)),
 		FlushEvery:       config.GetTimeDuration("flush", 10*time.Second),
 		MayDrop:          config.GetBoolean("drop", false),
 		LineJSON:         config.GetBoolean("json", false),
 		MessageFormatter: formatter,
-		c:                make(chan *logEntry, int(config.GetInt32("qsize", 128))),
-		wg:               &sync.WaitGroup{},
-	}
-	go hook.run()
-	logrus.RegisterExitHandler(func() {
-		hook.Close()
-	})
-	return hook, nil
+	}, int(config.GetInt32("qsize", 128)))
 }

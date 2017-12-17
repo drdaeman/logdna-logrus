@@ -13,7 +13,7 @@ Configuration
 
 Check out the `example/` subdirectory for a simple example.
 
-Currently, the only way to set up hook is to use Logrus Mate.
+You can create hook manually, `New` method or using Logrus Mate.
 For HOCON configuration provider (the default), add a hook like this:
 
     your-logger {
@@ -50,6 +50,9 @@ The supported options are:
     message. Default to false, enabling will append key-value pairs to
     the message texts, so they'll be immediately visible.
   - `url` allows to override the ignestion endpoint URL (e.g. for testing)
+
+With `New` method and `Config` struct you have a little more flexibility,
+as you can specify any `MessageFormatter` rather than just `text-format`.
 
 Limitations
 -----------
