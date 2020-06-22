@@ -6,7 +6,7 @@ LogDNA Logrus and Logrus Mate library
 This library allows logging to [LogDNA][logdna] from [Logrus][logrus],
 optionally configuring everything using [Logrus Mate][mate].
 
-This works for me, but is currently a work in progress.
+This library is not currently actively maintained.
 
 Configuration
 -------------
