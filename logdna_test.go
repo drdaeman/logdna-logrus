@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogap/config"
 	"github.com/gogap/logrus_mate"
 	"github.com/sirupsen/logrus"
 )
@@ -109,17 +110,29 @@ func (tcfg *TestConfig) GetByteList(path string) []byte {
 func (tcfg *TestConfig) GetStringList(path string) []string {
 	return []string{}
 }
-func (tcfg *TestConfig) GetConfig(path string) logrus_mate.Configuration {
+func (tcfg *TestConfig) GetConfig(path string) config.Configuration {
 	return tcfg
 }
-func (tcfg *TestConfig) WithFallback(fallback logrus_mate.Configuration) {
-	// Nothing to do here
+func (tcfg *TestConfig) WithFallback(fallback config.Configuration) config.Configuration {
+	return fallback
 }
 func (tcfg *TestConfig) HasPath(path string) bool {
 	return false
 }
 func (tcfg *TestConfig) Keys() []string {
 	return []string{}
+}
+func (tcfg *TestConfig) IsEmpty() bool {
+	return false
+}
+func (tcfg *TestConfig) IsObject(path string) bool {
+	return false
+}
+func (tcfg *TestConfig) IsArray(path string) bool {
+	return false
+}
+func (tcfg *TestConfig) String() string {
+	return fmt.Sprintf("TestConfig{URL: %v}", tcfg.URL)
 }
 
 func checkLines(t *testing.T, body []byte, expect []string, expectMeta []map[string]interface{}) {

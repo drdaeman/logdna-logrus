@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogap/config"
 	"github.com/gogap/logrus_mate"
 	"github.com/sirupsen/logrus"
 )
@@ -277,9 +278,9 @@ func New(config Config, queueSize int) (logrus.Hook, error) {
 }
 
 // NewFromConfig creates a new LogDNA hook from the Logrus Mate configuration
-func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
+func NewFromConfig(cfg config.Configuration) (logrus.Hook, error) {
 	var formatter logrus.Formatter
-	if config.GetBoolean("text-format", false) {
+	if cfg.GetBoolean("text-format", false) {
 		// TODO: Think of a way to pass arbitrary formatter via config
 		formatter = &SimpleTextFormatter{
 			QuoteEmptyFields: true,
@@ -287,17 +288,17 @@ func NewFromConfig(config logrus_mate.Configuration) (logrus.Hook, error) {
 	}
 
 	return New(Config{
-		IngestURL:        config.GetString("url", DefaultIngestURL),
-		APIKey:           config.GetString("api-key"),
-		Hostname:         config.GetString("hostname"),
-		MAC:              config.GetString("mac"),
-		IP:               config.GetString("ip"),
-		App:              config.GetString("app"),
-		Env:              config.GetString("env"),
-		BufferSize:       int(config.GetInt32("size", 4096)),
-		FlushEvery:       config.GetTimeDuration("flush", 10*time.Second),
-		MayDrop:          config.GetBoolean("drop", false),
-		LineJSON:         config.GetBoolean("json", false),
+		IngestURL:        cfg.GetString("url", DefaultIngestURL),
+		APIKey:           cfg.GetString("api-key"),
+		Hostname:         cfg.GetString("hostname"),
+		MAC:              cfg.GetString("mac"),
+		IP:               cfg.GetString("ip"),
+		App:              cfg.GetString("app"),
+		Env:              cfg.GetString("env"),
+		BufferSize:       int(cfg.GetInt32("size", 4096)),
+		FlushEvery:       cfg.GetTimeDuration("flush", 10*time.Second),
+		MayDrop:          cfg.GetBoolean("drop", false),
+		LineJSON:         cfg.GetBoolean("json", false),
 		MessageFormatter: formatter,
-	}, int(config.GetInt32("qsize", 128)))
+	}, int(cfg.GetInt32("qsize", 128)))
 }
