@@ -263,9 +263,9 @@ func (hook *Hook) run() chan *logEntry {
 				err := hook.Config.flush(&buffer)
 				if err == nil {
 					buffer = make([]*logEntry, 0)
-					timeout = time.After(hook.Config.FlushEvery)
 				}
 			}
+			timeout = time.After(hook.Config.FlushEvery)
 		}
 	}
 }
