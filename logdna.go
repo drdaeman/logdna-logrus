@@ -35,6 +35,10 @@ type Config struct {
 	MayDrop          bool
 	LineJSON         bool
 	MessageFormatter logrus.Formatter
+
+	// Instrumentation functions, called in a separate goroutine
+	OnDrop  func(entries int)
+	OnFlush func(entries int, err error)
 }
 
 // Hook is a Logrus hook that sends entries to LogDNA
@@ -123,6 +127,9 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 		select {
 		case hook.c <- e:
 		default:
+			if hook.Config.OnDrop != nil {
+				go hook.Config.OnDrop(1)
+			}
 		}
 	} else {
 		// Won't lose data but may block if channel's full.
@@ -149,6 +156,14 @@ func (config *Config) flush(buffer *[]*logEntry) error {
 		return nil
 	}
 
+	err := config._flush(buffer)
+	if config.OnFlush != nil {
+		go config.OnFlush(len(*buffer), err)
+	}
+	return err
+}
+
+func (config *Config) _flush(buffer *[]*logEntry) error {
 	body, err := json.Marshal(&struct {
 		Lines []*logEntry `json:"lines"`
 	}{
@@ -236,10 +251,12 @@ func (hook *Hook) run() chan *logEntry {
 				err := hook.Config.flush(&buffer)
 				if err == nil || hook.Config.MayDrop {
 					// TODO: Consider retrying a few times?
+					if err != nil && hook.Config.OnDrop != nil {
+						go hook.Config.OnDrop(len(buffer))
+					}
 					buffer = make([]*logEntry, 0)
 					timeout = time.After(hook.Config.FlushEvery)
 				}
-				// TODO: Wish there'd be some way to signal about the error
 			}
 		case <-timeout:
 			if len(buffer) > 0 {
