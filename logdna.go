@@ -30,6 +30,7 @@ type Config struct {
 	App              string // NOTE: App and Env are global at the moment
 	Env              string
 	BufferSize       int
+	QueueSize        int
 	FlushEvery       time.Duration
 	MayDrop          bool
 	LineJSON         bool
@@ -251,8 +252,8 @@ func init() {
 	logrus_mate.RegisterHook("logdna", NewFromConfig)
 }
 
-// New creates a new LogDNA hook from a given Config struct (and some extras)
-func New(config Config, queueSize int) (logrus.Hook, error) {
+// New creates a new LogDNA hook from a given Config struct
+func New(config Config) (logrus.Hook, error) {
 	if config.APIKey == "" {
 		return nil, errors.New("LogDNA API key is required")
 	}
@@ -264,10 +265,13 @@ func New(config Config, queueSize int) (logrus.Hook, error) {
 			return nil, err
 		}
 	}
+	if config.QueueSize == 0 {
+		config.QueueSize = 128
+	}
 
 	hook := &Hook{
 		Config: &config,
-		c:      make(chan *logEntry, queueSize),
+		c:      make(chan *logEntry, config.QueueSize),
 		wg:     &sync.WaitGroup{},
 	}
 	go hook.run()
@@ -277,8 +281,8 @@ func New(config Config, queueSize int) (logrus.Hook, error) {
 	return hook, nil
 }
 
-// NewFromConfig creates a new LogDNA hook from the Logrus Mate configuration
-func NewFromConfig(cfg config.Configuration) (logrus.Hook, error) {
+// NewConfig creates a new LogDNA Config from the Logrus Mate configuration
+func NewConfig(cfg config.Configuration) Config {
 	var formatter logrus.Formatter
 	if cfg.GetBoolean("text-format", false) {
 		// TODO: Think of a way to pass arbitrary formatter via config
@@ -287,7 +291,7 @@ func NewFromConfig(cfg config.Configuration) (logrus.Hook, error) {
 		}
 	}
 
-	return New(Config{
+	return Config{
 		IngestURL:        cfg.GetString("url", DefaultIngestURL),
 		APIKey:           cfg.GetString("api-key"),
 		Hostname:         cfg.GetString("hostname"),
@@ -296,9 +300,15 @@ func NewFromConfig(cfg config.Configuration) (logrus.Hook, error) {
 		App:              cfg.GetString("app"),
 		Env:              cfg.GetString("env"),
 		BufferSize:       int(cfg.GetInt32("size", 4096)),
+		QueueSize:        int(cfg.GetInt32("qsize", 128)),
 		FlushEvery:       cfg.GetTimeDuration("flush", 10*time.Second),
 		MayDrop:          cfg.GetBoolean("drop", false),
 		LineJSON:         cfg.GetBoolean("json", false),
 		MessageFormatter: formatter,
-	}, int(cfg.GetInt32("qsize", 128)))
+	}
+}
+
+// NewFromConfig creates a new LogDNA hook from the Logrus Mate configuration
+func NewFromConfig(cfg config.Configuration) (logrus.Hook, error) {
+	return New(NewConfig(cfg))
 }
