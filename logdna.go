@@ -161,6 +161,9 @@ func (config *Config) flush(buffer *[]*logEntry) error {
 	client := &http.Client{} // TODO: Make this user-configurable?
 	bodyReader := bytes.NewReader(body)
 	req, err := http.NewRequest("POST", config.IngestURL, bodyReader)
+	if err != nil {
+		return err
+	}
 	req.SetBasicAuth("", config.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 	q := req.URL.Query()
@@ -177,7 +180,9 @@ func (config *Config) flush(buffer *[]*logEntry) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 	if response.StatusCode > 299 || response.StatusCode < 200 {
 		return fmt.Errorf("HTTP error %d", response.StatusCode)
 	}
@@ -276,7 +281,7 @@ func New(config Config) (logrus.Hook, error) {
 	}
 	go hook.run()
 	logrus.RegisterExitHandler(func() {
-		hook.Close()
+		_ = hook.Close()
 	})
 	return hook, nil
 }

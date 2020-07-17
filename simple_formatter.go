@@ -36,10 +36,16 @@ func (f *SimpleTextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		sort.Strings(keys)
 	}
 
-	fmt.Fprintf(b, "%s ", entry.Message)
+	_, err := fmt.Fprintf(b, "%s ", entry.Message)
+	if err != nil {
+		return nil, err
+	}
 	for _, k := range keys {
 		v := entry.Data[k]
-		fmt.Fprintf(b, " %s=", k)
+		_, err := fmt.Fprintf(b, " %s=", k)
+		if err != nil {
+			return nil, err
+		}
 		f.appendValue(b, v)
 	}
 	return b.Bytes(), nil

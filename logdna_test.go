@@ -21,13 +21,13 @@ type TestConfig struct {
 	URL string
 }
 
-func (tcfg *TestConfig) GetBoolean(path string, defaultVal ...bool) bool {
+func (tcfg *TestConfig) GetBoolean(_ string, defaultVal ...bool) bool {
 	if len(defaultVal) > 0 {
 		return defaultVal[0]
 	}
 	return false
 }
-func (tcfg *TestConfig) GetByteSize(path string) *big.Int {
+func (tcfg *TestConfig) GetByteSize(_ string) *big.Int {
 	return big.NewInt(0)
 }
 func (tcfg *TestConfig) GetInt32(path string, defaultVal ...int32) int32 {
@@ -42,7 +42,7 @@ func (tcfg *TestConfig) GetInt32(path string, defaultVal ...int32) int32 {
 	}
 	return 0
 }
-func (tcfg *TestConfig) GetInt64(path string, defaultVal ...int64) int64 {
+func (tcfg *TestConfig) GetInt64(_ string, defaultVal ...int64) int64 {
 	if len(defaultVal) > 0 {
 		return defaultVal[0]
 	}
@@ -63,14 +63,14 @@ func (tcfg *TestConfig) GetString(path string, defaultVal ...string) string {
 	}
 	return ""
 }
-func (tcfg *TestConfig) GetFloat32(path string, defaultVal ...float32) float32 {
+func (tcfg *TestConfig) GetFloat32(_ string, defaultVal ...float32) float32 {
 	if len(defaultVal) > 0 {
 		return defaultVal[0]
 	}
 	return 0
 
 }
-func (tcfg *TestConfig) GetFloat64(path string, defaultVal ...float64) float64 {
+func (tcfg *TestConfig) GetFloat64(_ string, defaultVal ...float64) float64 {
 	if len(defaultVal) > 0 {
 		return defaultVal[0]
 	}
@@ -79,7 +79,7 @@ func (tcfg *TestConfig) GetFloat64(path string, defaultVal ...float64) float64 {
 }
 func (tcfg *TestConfig) GetTimeDuration(path string, defaultVal ...time.Duration) time.Duration {
 	if path == "flush" {
-		return time.Duration(1 * time.Second)
+		return 1 * time.Second
 	}
 	if len(defaultVal) > 0 {
 		return defaultVal[0]
@@ -89,34 +89,34 @@ func (tcfg *TestConfig) GetTimeDuration(path string, defaultVal ...time.Duration
 func (tcfg *TestConfig) GetTimeDurationInfiniteNotAllowed(path string, defaultVal ...time.Duration) time.Duration {
 	return tcfg.GetTimeDuration(path, defaultVal...)
 }
-func (tcfg *TestConfig) GetBooleanList(path string) []bool {
+func (tcfg *TestConfig) GetBooleanList(_ string) []bool {
 	return []bool{}
 }
-func (tcfg *TestConfig) GetFloat32List(path string) []float32 {
+func (tcfg *TestConfig) GetFloat32List(_ string) []float32 {
 	return []float32{}
 }
-func (tcfg *TestConfig) GetFloat64List(path string) []float64 {
+func (tcfg *TestConfig) GetFloat64List(_ string) []float64 {
 	return []float64{}
 }
-func (tcfg *TestConfig) GetInt32List(path string) []int32 {
+func (tcfg *TestConfig) GetInt32List(_ string) []int32 {
 	return []int32{}
 }
-func (tcfg *TestConfig) GetInt64List(path string) []int64 {
+func (tcfg *TestConfig) GetInt64List(_ string) []int64 {
 	return []int64{}
 }
-func (tcfg *TestConfig) GetByteList(path string) []byte {
+func (tcfg *TestConfig) GetByteList(_ string) []byte {
 	return []byte{}
 }
-func (tcfg *TestConfig) GetStringList(path string) []string {
+func (tcfg *TestConfig) GetStringList(_ string) []string {
 	return []string{}
 }
-func (tcfg *TestConfig) GetConfig(path string) config.Configuration {
+func (tcfg *TestConfig) GetConfig(_ string) config.Configuration {
 	return tcfg
 }
 func (tcfg *TestConfig) WithFallback(fallback config.Configuration) config.Configuration {
 	return fallback
 }
-func (tcfg *TestConfig) HasPath(path string) bool {
+func (tcfg *TestConfig) HasPath(_ string) bool {
 	return false
 }
 func (tcfg *TestConfig) Keys() []string {
@@ -125,10 +125,10 @@ func (tcfg *TestConfig) Keys() []string {
 func (tcfg *TestConfig) IsEmpty() bool {
 	return false
 }
-func (tcfg *TestConfig) IsObject(path string) bool {
+func (tcfg *TestConfig) IsObject(_ string) bool {
 	return false
 }
-func (tcfg *TestConfig) IsArray(path string) bool {
+func (tcfg *TestConfig) IsArray(_ string) bool {
 	return false
 }
 func (tcfg *TestConfig) String() string {
@@ -252,7 +252,7 @@ func TestLogDNA(t *testing.T) {
 		c <- body
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
-		w.Write([]byte(`{"status": "ok"}`))
+		_, _ = w.Write([]byte(`{"status": "ok"}`))
 	}))
 	defer ts.Close()
 
